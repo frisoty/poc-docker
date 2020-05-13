@@ -1,0 +1,58 @@
+version: '3.5'
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5430:5432"
+    volumes:
+      - "./data/postgresql:/var/lib/postgresql/data:cached"
+  nginx:
+    build: images/nginx
+    ports:
+      - "80:80"
+    volumes:
+      - "./config/nginx/conf.d:/etc/nginx/conf.d"
+      - "../admin:/var/www/admin:cached"
+      - "../astronaut:/var/www/astronaut:cached"
+    networks:
+      default:
+        aliases:
+          - admin.poc-radio.com
+          - admin-gateway.poc-radio.com
+          - astronaut.poc-radio.com
+  adminer:
+    image: adminer
+    restart: always
+    depends_on:
+      - postgres
+      - nginx
+    ports:
+      - 8080:8080
+
+# services
+  astronaut:
+    build:
+      context: ../astronaut
+    depends_on:
+      - postgres
+      - nginx
+    env_file:
+      - ../astronaut/.env
+    volumes:
+      - "../astronaut:/var/www/astronaut"
+# apps
+  admin:
+    build:
+      context: ../admin
+    depends_on:
+      - astronaut
+      - nginx
+    volumes:
+      - "../admin:/var/www/admin"
+
+volumes:
+  postgres_data:
+
